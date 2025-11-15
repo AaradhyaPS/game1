@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Endless Silhouette Runner — Upload-ready</title>
+<title>Endless Level Devil (No Dust)</title>
 <style>
-  html,body{height:100%;margin:0;background:#071220;font-family:Inter,Arial,Helvetica,sans-serif}
+  html,body{height:100%;margin:0;background:#061022;font-family:Inter,Arial,Helvetica,sans-serif}
   #canvasWrap{display:flex;align-items:center;justify-content:center;height:100vh}
-  canvas{border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,0.6);max-width:100%;height:auto;background:linear-gradient(#87CEEB,#cfe9ff)}
+  canvas{border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,0.6);max-width:100%;height:auto;background:#87CEEB}
   #uiTop{position:fixed;left:12px;top:12px;z-index:30;color:#fff}
   .box{background:rgba(0,0,0,0.45);padding:8px 10px;border-radius:8px;margin-bottom:8px}
   #controls{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:30}
-  .btn{background:#1f2937;border:0;padding:10px 14px;border-radius:10px;color:#fff;font-weight:700;box-shadow:0 6px 12px rgba(0,0,0,0.25);touch-action:none}
+  .btn{background:#2b8cff;border:0;padding:10px 14px;border-radius:10px;color:#fff;font-weight:700;box-shadow:0 6px 12px rgba(0,0,0,0.25);touch-action:none}
   #menu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;color:#fff}
   .panel{background:linear-gradient(180deg,rgba(0,0,0,0.75),rgba(0,0,0,0.45));padding:18px;border-radius:14px;text-align:center;width:360px}
-  .small{font-size:12px;color:#ddd}
   @media (max-width:600px){ .panel{width:92vw} canvas{width:95vw} }
+  .small{font-size:12px;color:#ddd}
 </style>
 </head>
 <body>
@@ -30,17 +30,17 @@
   <button id="acc" class="btn">▶</button>
   <button id="jump" class="btn">▲</button>
   <button id="pause" class="btn">Pause</button>
-  <button id="mute" class="btn">Mute</button>
+  <button id="mute" class="btn" style="background:#444">Mute</button>
 </div>
 
 <div id="menu">
   <div class="panel" id="startPanel">
-    <h2 style="margin:6px 0 0 0">Endless Silhouette Runner</h2>
-    <p class="small" style="opacity:0.9">Endless, procedural platform levels. Solid black silhouette runner (4-frame smooth run).</p>
+    <h2 style="margin:6px 0 0 0">Endless Level Devil</h2>
+    <p class="small" style="opacity:0.9">Endless levels. Reach the finish to advance. Robot player (Eilik-like Robo Runner). No dust particles.</p>
     <button id="startBtn" class="btn">Start Game</button>
     <button id="how" class="btn" style="background:#4caf50;margin-top:8px">How to Play</button>
     <div style="height:8px"></div>
-    <div class="small">Controls: A/D or ←/→, W/Space to jump. Mobile: use buttons on the right.</div>
+    <div class="small">Controls: A/D or ←/→, W/Space to jump. On mobile use buttons.</div>
   </div>
 
   <div class="panel" id="pausePanel" style="display:none">
@@ -51,13 +51,13 @@
 
   <div class="panel" id="howPanel" style="display:none">
     <h3>How to Play</h3>
-    <p class="small">Avoid traps. Collect coins for points. Reach the finish to generate the next level. You respawn at the last checkpoint when you die.</p>
+    <p class="small">Avoid traps. Collect coins. Reach the finish to advance levels. Checkpoints save your position — you respawn at the last checkpoint when you die.</p>
     <button id="backToMenu" class="btn">Back</button>
   </div>
 </div>
 
 <script>
-/* ----------------- Helpers ----------------- */
+/* ---------- Helpers ---------- */
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r=6){
     this.beginPath();
@@ -74,14 +74,14 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
   };
 }
 
-/* ----------------- Config ----------------- */
+/* ---------- Config ---------- */
 const CANVAS_W = 1000, CANVAS_H = 560;
 const CAMERA_LEFT_PADDING = 260;
 const SEGMENT_W = 700;
 const START_SEGMENTS = 5;
 let SOUND_ON = true;
 
-/* ----------------- Canvas & UI ----------------- */
+/* ---------- Canvas & UI ---------- */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 canvas.width = CANVAS_W; canvas.height = CANVAS_H;
@@ -102,7 +102,7 @@ const muteBtn = document.getElementById('mute');
 let HIGH_SCORE = parseInt(localStorage.getItem('lv_high') || '0');
 bestEl.innerText = HIGH_SCORE;
 
-/* ----------------- Input ----------------- */
+/* ---------- Input ---------- */
 let keys = {};
 window.addEventListener('keydown', e=>{ keys[e.key]=true; if(e.key==='p') togglePause(); if(e.key==='m'){ SOUND_ON=!SOUND_ON; updateMute(); }});
 window.addEventListener('keyup', e=>{ keys[e.key]=false; });
@@ -120,24 +120,28 @@ backToMenu.addEventListener('click', ()=> { howPanel.style.display='none'; start
 muteBtn.addEventListener('click', ()=> { SOUND_ON = !SOUND_ON; updateMute(); });
 function updateMute(){ muteBtn.innerText = SOUND_ON ? 'Mute' : 'Unmute'; }
 
-/* ----------------- Audio (small) ----------------- */
+/* ---------- Audio (tiny WebAudio) ---------- */
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 function ensureAudio(){ if(!audioCtx) audioCtx = new AudioCtx(); }
 function sfx(freq=440,type='sine',dur=0.08,vol=0.07){ if(!SOUND_ON) return; ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=vol; o.connect(g); g.connect(audioCtx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur); setTimeout(()=> o.stop(), dur*1000+20); }
 function sJump(){ sfx(520,'triangle',0.12,0.12); } function sLand(){ sfx(260,'square',0.06,0.06); } function sDie(){ sfx(120,'sine',0.28,0.18); } function sCoin(){ sfx(780,'sine',0.08,0.08); } function sCheckpoint(){ sfx(440,'sawtooth',0.12,0.12); }
 
-/* ----------------- Entities ----------------- */
-/* Silhouette runner: 4-frame smooth run cycle */
+/* ---------- Entities & Gameplay ---------- */
+/* Player: Robo Runner (Eilik-style compact action robot) */
 class Player {
-  constructor(){ this.reset(); this.anim = 0; this.frame = 0; this.facing = 1; this.checkpointX = 120; this.checkpointY = 360; }
-  reset(){ this.x = this.checkpointX; this.y = this.checkpointY; this.w = 30; this.h = 46; this.vx = 0; this.vy = 0; this.onGround = false; this.runningTime = 0; }
+  constructor(){ this.reset(); this.anim=0; this.facing=1; this.checkpointX = 120; this.checkpointY = 360; }
+  reset(){ this.x = this.checkpointX; this.y = this.checkpointY; this.w = 34; this.h = 50; this.vx = 0; this.vy = 0; this.onGround = false; }
   collision(o){ return this.x+this.w>o.x && this.x < o.x+o.w && this.y+this.h>o.y && this.y < o.y+o.h; }
-  die(){ if(SOUND_ON) sDie(); score = Math.max(0, score - 80); this.reset(); camX = Math.max(0, this.x - CAMERA_LEFT_PADDING); }
+  die(){ if(SOUND_ON) sDie(); // respawn at checkpoint
+      score = Math.max(0, score - 80);
+      this.reset();
+      camX = Math.max(0, this.x - CAMERA_LEFT_PADDING);
+  }
   update(dt){
     const accel = 0.25 * (dt/16);
-    if(keys['a']||keys['ArrowLeft']){ this.vx -= accel; this.facing = -1; }
-    if(keys['d']||keys['ArrowRight']){ this.vx += accel; this.facing = 1; }
+    if(keys['a']||keys['ArrowLeft']){ this.vx -= accel; this.facing=-1; }
+    if(keys['d']||keys['ArrowRight']){ this.vx += accel; this.facing=1; }
     this.vx = Math.max(-4.2, Math.min(this.vx, 6.2));
     this.vx *= 0.993;
     this.vy += 0.9 * (dt/16);
@@ -147,7 +151,7 @@ class Player {
     this.x += this.vx * (dt/16);
     this.y += this.vy * (dt/16);
 
-    // platform collisions
+    // collisions with platforms
     this.onGround = false;
     for(let p of level.platforms){
       if(this.x + this.w > p.x && this.x < p.x + p.w){
@@ -173,7 +177,7 @@ class Player {
       }
     }
 
-    // checkpoints activation
+    // checkpoint activation
     for(let cp of level.checkpoints){
       if(!cp.activated && this.x + this.w > cp.x){
         cp.activated = true;
@@ -184,71 +188,73 @@ class Player {
 
     if(this.y > canvas.height + 200) this.die();
 
-    // animation: 4-frame smooth run based on runningTime
-    if(this.onGround && Math.abs(this.vx) > 0.5){
-      this.runningTime += Math.abs(this.vx) * (dt/16);
-      // frame 0..3
-      this.frame = Math.floor((this.runningTime * 10) % 4);
-    } else {
-      this.frame = 0; // default standing pose
-    }
+    this.anim += Math.abs(this.vx) * 0.05;
   }
 
   draw(){
+    // Robo Runner style 3 (compact action)
     const px = this.x - camX, py = this.y;
     ctx.save();
     ctx.translate(px + this.w/2, py + this.h/2);
     if(this.facing < 0) ctx.scale(-1,1);
 
-    // draw body silhouette (head, torso, arms, legs) but animate limbs by frame
-    ctx.fillStyle = '#000';
+    // bob & run
+    const bob = Math.sin(this.anim * 0.28) * 2;
 
-    // simple parameters for frames (angles/offsets)
-    const frames = [
-      {legOffset: 6, armAngle: 18},    // frame 0
-      {legOffset: 2, armAngle: 6},     // frame 1
-      {legOffset: -6, armAngle: -10},  // frame 2
-      {legOffset: -2, armAngle: -2}    // frame 3
-    ];
-    const f = frames[this.frame];
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(0, this.h/2 + 10, 26, 10, 0,0,Math.PI*2); ctx.fill();
 
-    // head (circle)
-    ctx.beginPath(); ctx.arc(0, -18, 12, 0, Math.PI*2); ctx.fill();
+    // small capsule body
+    ctx.fillStyle = '#3b4756';
+    ctx.roundRect(-14, -2 + bob, 28, 34, 6); ctx.fill();
 
-    // neck / torso
-    ctx.fillRect(-8, -8, 16, 24);
+    // legs
+    ctx.fillStyle = '#263142';
+    ctx.fillRect(-12, 30 + bob, 8, 20);
+    ctx.fillRect(4, 30 + bob, 8, 20);
 
-    // left arm (upper)
-    ctx.save();
-    ctx.translate(-8, -4);
-    ctx.rotate((f.armAngle) * Math.PI / 180);
-    ctx.fillRect(-4, 0, 6, 22);
-    ctx.restore();
+    // feet
+    ctx.fillStyle = '#0b1220';
+    ctx.fillRect(-14, 50 + bob, 12, 6);
+    ctx.fillRect(2, 50 + bob, 12, 6);
 
-    // right arm
-    ctx.save();
-    ctx.translate(8, -4);
-    ctx.rotate((-f.armAngle) * Math.PI / 180);
-    ctx.fillRect(-2, 0, 6, 22);
-    ctx.restore();
+    // neck
+    ctx.fillStyle = '#2b3946'; ctx.fillRect(-6, -12 + bob, 12, 6);
 
-    // legs (two rectangles with offset)
-    ctx.fillRect(-10, 16 + f.legOffset/2, 8, 28);
-    ctx.fillRect(2, 16 - f.legOffset/2, 8, 28);
+    // head (round)
+    ctx.fillStyle = '#f3f7fa';
+    ctx.beginPath(); ctx.arc(0, -18 + bob, 28, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#9aa6b3'; ctx.lineWidth = 2; ctx.stroke();
+
+    // face panel
+    ctx.fillStyle = '#edf6ff'; ctx.roundRect(-14, -34 + bob, 28, 20, 6); ctx.fill();
+
+    // LED eyes (glow)
+    const glow = 0.6 + Math.abs(Math.sin(Date.now()*0.01))*0.6;
+    ctx.fillStyle = `rgba(70,190,255,${glow})`; ctx.fillRect(-9, -30 + bob, 8, 10); ctx.fillRect(2, -30 + bob, 8, 10);
+    ctx.strokeStyle = '#06354a'; ctx.strokeRect(-9, -30 + bob, 8, 10); ctx.strokeRect(2, -30 + bob, 8, 10);
+
+    // small side lights
+    ctx.fillStyle = '#80bfff'; ctx.fillRect(18, -6 + bob, 6, 10);
+
+    // antenna
+    ctx.beginPath(); ctx.moveTo(12, -42 + bob); ctx.lineTo(20, -50 + bob); ctx.strokeStyle='#2b3946'; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.arc(20, -50 + bob, 3.5,0,Math.PI*2); ctx.fill();
 
     ctx.restore();
   }
 }
 
-/* ---------- Other objects ---------- */
-class Platform { constructor(x,y,w,type='static',vx=0,range=0){ this.x=x; this.y=y; this.w=w; this.h=20; this.type=type; this.vx=vx; this.range=range; this.origX=x; } update(dt){ if(this.type==='moving'){ this.x += this.vx * (dt/16); if(this.x < this.origX-this.range || this.x > this.origX+this.range) this.vx *= -1; } } draw(){ ctx.fillStyle = this.type==='moving'? '#111827' : '#374151'; ctx.fillRect(this.x - camX, this.y, this.w, this.h); ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.strokeRect(this.x - camX, this.y, this.w, this.h); } }
+/* ---------- Platform, Spike, PopSpike, FakeFloor, Coin, Checkpoint ---------- */
+class Platform { constructor(x,y,w,type='static',vx=0,range=0){ this.x=x; this.y=y; this.w=w; this.h=20; this.type=type; this.vx=vx; this.range=range; this.origX=x; } update(dt){ if(this.type==='moving'){ this.x += this.vx * (dt/16); if(this.x < this.origX-this.range || this.x > this.origX+this.range) this.vx *= -1; } } draw(){ ctx.fillStyle = this.type==='moving'? '#2b6cb4' : '#6b7280'; ctx.fillRect(this.x - camX, this.y, this.w, this.h); ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.strokeRect(this.x - camX, this.y, this.w, this.h); } }
 class Spike { constructor(x,y,w=28){ this.x=x; this.y=y; this.w=w; this.h=w; } draw(){ ctx.fillStyle='#b91c1c'; ctx.beginPath(); ctx.moveTo(this.x - camX, this.y + this.h); ctx.lineTo(this.x - camX + this.w/2, this.y); ctx.lineTo(this.x - camX + this.w, this.y + this.h); ctx.fill(); ctx.strokeStyle='#7b0000'; ctx.stroke(); } }
 class PopSpike { constructor(x,y){ this.x=x; this.baseY=y+40; this.y=this.baseY; this.w=28; this.h=28; this.triggerAt=x-140; this.active=false; this.timer=0; } activate(){ this.active=true; this.timer=18; } update(dt){ if(this.active && this.timer>0){ this.y -= 6; this.timer--; } else if(this.active && this.timer===0){ if(this.y <= this.baseY - 40) this.timer = -36; } else if(this.active && this.timer < 0){ this.y += 6; this.timer++; if(this.y >= this.baseY){ this.y = this.baseY; this.active=false; this.timer=0; } } } draw(){ ctx.fillStyle='#b91c1c'; ctx.beginPath(); ctx.moveTo(this.x - camX, this.y + this.h); ctx.lineTo(this.x - camX + this.w/2, this.y); ctx.lineTo(this.x - camX + this.w, this.y + this.h); ctx.fill(); ctx.strokeStyle='#7b0000'; ctx.stroke(); } }
-class FakeFloor { constructor(x,y,w,delay=18){ this.x=x; this.y=y; this.w=w; this.h=16; this.delay=delay; this.stepStarted=false; this.timer=0; this.broken=false; } draw(){ ctx.fillStyle = this.broken ? '#4b5563' : '#8b5e34'; ctx.fillRect(this.x - camX, this.y, this.w, this.h); } }
-class Coin { constructor(x,y,size=16){ this.x=x; this.y=y; this.size=size; this.collected=false; } draw(){ if(this.collected) return; ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(this.x - camX + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#b8860b'; ctx.stroke(); } }
-class Checkpoint { constructor(x,y){ this.x=x; this.y=y; this.activated=false; } draw(){ ctx.fillStyle = this.activated ? '#10b981' : '#ffd54f'; ctx.beginPath(); ctx.roundRect(this.x - camX - 6, this.y - 50, 12, 40, 4); ctx.fill(); ctx.fillStyle = this.activated ? '#064e3b' : '#6d4c41'; ctx.fillRect(this.x - camX - 10, this.y - 12, 32, 8); } }
+class FakeFloor { constructor(x,y,w,delay=18){ this.x=x; this.y=y; this.w=w; this.h=16; this.delay=delay; this.stepStarted=false; this.timer=0; this.broken=false; } draw(){ ctx.fillStyle = this.broken ? '#6c3' : '#b78b5a'; ctx.fillRect(this.x - camX, this.y, this.w, this.h); } }
+class Coin { constructor(x,y,size=18){ this.x=x; this.y=y; this.size=size; this.collected=false; } draw(){ if(this.collected) return; ctx.fillStyle='#ffd700'; ctx.beginPath(); ctx.arc(this.x - camX + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#b8860b'; ctx.stroke(); } }
+class Checkpoint { constructor(x,y){ this.x=x; this.y=y; this.activated=false; } draw(){ ctx.fillStyle = this.activated ? '#4caf50' : '#ffd54f'; ctx.beginPath(); ctx.roundRect(this.x - camX - 6, this.y - 50, 12, 40, 4); ctx.fill(); ctx.fillStyle = this.activated ? '#083' : '#6d4c41'; ctx.fillRect(this.x - camX - 10, this.y - 12, 32, 8); } }
 
-/* ----------------- Level generation ----------------- */
+/* ---------- Level generation (procedural) ---------- */
 let level = { platforms:[], spikes:[], popSpikes:[], fakeFloors:[], coins:[], checkpoints:[], mapWidth: SEGMENT_W * START_SEGMENTS, finishX:0 };
 function rand(min,max){ return Math.random()*(max-min)+min; } function rint(a,b){ return Math.floor(rand(a,b+1)); }
 
@@ -283,16 +289,16 @@ function buildLevelFor(number){
       const fx = px + rint(40, Math.max(40, pW-40));
       level.fakeFloors.push(new FakeFloor(fx, pY - 16, rint(60,140)));
     }
-    // coins
+    // coins placement (rare clusters)
     if(Math.random() < 0.5){
       const coinCount = rint(1,3);
       for(let i=0;i<coinCount;i++){
         const cx = px + rint(20, Math.max(20, pW-20));
         const cy = pY - rint(40, 80);
-        level.coins.push(new Coin(cx, cy, 14));
+        level.coins.push(new Coin(cx, cy, 16));
       }
     }
-    // checkpoint
+    // checkpoint every ~2 segments
     if(Math.random() < 0.18 + difficulty*0.03){
       const cpx = px + Math.min(120, Math.max(60, Math.floor(pW/2)));
       level.checkpoints.push(new Checkpoint(cpx, pY));
@@ -301,7 +307,7 @@ function buildLevelFor(number){
     x += gap + pW + rint(80,200);
     if(x > level.mapWidth - 240) break;
   }
-
+  // if no checkpoint created, create one near middle
   if(level.checkpoints.length === 0){
     const mid = Math.floor(level.mapWidth/2);
     level.checkpoints.push(new Checkpoint(mid, 360));
@@ -309,7 +315,7 @@ function buildLevelFor(number){
   level.finishX = level.mapWidth - 160;
 }
 
-/* ----------------- State ----------------- */
+/* ---------- State ---------- */
 let player = new Player();
 let camX = 0;
 let levelNumber = 1;
@@ -318,33 +324,38 @@ let coinsCollected = 0;
 let paused = false;
 let menuVisible = true;
 
-/* ----------------- Control functions ----------------- */
+/* ---------- Controls & state funcs ---------- */
 function begin(){ menuVisible=false; startPanel.style.display='none'; howPanel.style.display='none'; pausePanel.style.display='none'; buildLevelFor(levelNumber); player.checkpointX = 120; player.checkpointY = 360; player.reset(); camX=0; score=0; coinsCollected=0; coinsEl.innerText = coinsCollected; lastTime = performance.now(); requestAnimationFrame(loop); }
 function resetAll(full=false){ levelNumber=1; score=0; coinsCollected=0; player.checkpointX=120; player.checkpointY=360; player.reset(); buildLevelFor(levelNumber); camX=0; levelEl.innerText=levelNumber; scoreEl.innerText=score; coinsEl.innerText=coinsCollected; localStorage.setItem('lv_high', HIGH_SCORE); menuVisible=false; startPanel.style.display='none'; pausePanel.style.display='none'; }
 function togglePause(){ paused = !paused; if(paused){ pausePanel.style.display='block'; } else { pausePanel.style.display='none'; lastTime = performance.now(); requestAnimationFrame(loop); } }
 function resumeGame(){ paused=false; pausePanel.style.display='none'; lastTime = performance.now(); requestAnimationFrame(loop); }
 
-/* ----------------- Advance level ----------------- */
+/* ---------- Advance level ---------- */
 function advanceLevel(){
   levelNumber++;
   levelEl.innerText = levelNumber;
   score += Math.floor(level.mapWidth/10);
   scoreEl.innerText = score;
   if(score > HIGH_SCORE){ HIGH_SCORE = score; localStorage.setItem('lv_high', HIGH_SCORE); bestEl.innerText = HIGH_SCORE; }
+  // reset coinsCollected? keep cumulative
   buildLevelFor(levelNumber);
+  // place player at start of new level
   player.checkpointX = 120; player.checkpointY = 360;
   player.reset(); camX = 0;
 }
 
-/* ----------------- Loop ----------------- */
+/* ---------- Loop ---------- */
 let lastTime = performance.now();
 function loop(now){
   if(paused || menuVisible){ lastTime = performance.now(); return; }
   const dt = Math.min(40, now - lastTime);
   lastTime = now;
 
+  // update moving platforms
   for(let p of level.platforms) if(p.type === 'moving') p.update(dt);
+  // update pop spikes
   for(let ps of level.popSpikes){ if(!ps.active && player.x > ps.triggerAt) ps.activate(); if(ps.active) ps.update(dt); }
+  // fake floors
   for(let f of level.fakeFloors){
     if(!f.broken && player.x + player.w > f.x && player.x < f.x + f.w && player.y + player.h > f.y && player.y < f.y + f.h){
       if(!f.stepStarted){ f.stepStarted = true; f.timer = f.delay; }
@@ -361,7 +372,7 @@ function loop(now){
   score = Math.max(score, Math.floor(player.x + (levelNumber-1)*500));
   scoreEl.innerText = score;
 
-  // update checkpoint info (player.checkpointX updated when cp activated)
+  // check if pass any checkpoint -> mark activated and set player's checkpoint
   for(let cp of level.checkpoints){
     if(cp.activated && cp.x > player.checkpointX){
       player.checkpointX = cp.x - 20;
@@ -369,6 +380,7 @@ function loop(now){
     }
   }
 
+  // reach finish
   if(player.x > level.mapWidth - 120){ advanceLevel(); }
 
   drawScene();
@@ -376,47 +388,50 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-/* ----------------- Drawing ----------------- */
+/* ---------- Drawing ---------- */
 function drawScene(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // simple sky bg
+  // background
   const g = ctx.createLinearGradient(0,0,0,canvas.height); g.addColorStop(0,'#87CEEB'); g.addColorStop(1,'#cfe9ff'); ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
 
   // ground
-  ctx.fillStyle = '#2d3748'; ctx.fillRect(-camX, 460, canvas.width + camX, canvas.height - 460);
+  ctx.fillStyle = '#6b8e23'; ctx.fillRect(-camX, 460, canvas.width + camX, canvas.height - 460);
 
   // platforms
   for(let p of level.platforms) p.draw();
+
   // fake floors
   for(let f of level.fakeFloors) f.draw();
+
   // spikes
   for(let s of level.spikes) s.draw();
+
   // pop spikes
   for(let ps of level.popSpikes) ps.draw();
+
   // coins
   for(let c of level.coins) c.draw();
+
   // checkpoints
   for(let cp of level.checkpoints) cp.draw();
 
-  // finish flag
-  ctx.fillStyle = '#ffd54f'; ctx.fillRect(level.finishX - camX, 300, 12, 140);
-  ctx.fillStyle = '#6d4c41'; ctx.fillRect(level.finishX - camX - 8, 420, 36, 20);
+  // finish
+  ctx.fillStyle = '#ffd54f'; ctx.fillRect(level.finishX - camX, 300, 12, 140); ctx.fillStyle = '#6d4c41'; ctx.fillRect(level.finishX - camX - 8, 420, 36, 20);
 
-  // player silhouette
+  // player
   player.draw();
 
-  // hint box
+  // small hint box
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(canvas.width - 220, 8, 210, 36);
   ctx.fillStyle = '#fff'; ctx.font = '14px Inter, Arial'; ctx.fillText('Finish →', canvas.width - 180, 30);
 }
 
-/* ----------------- Init ----------------- */
+/* ---------- Initialize ---------- */
 buildLevelFor(levelNumber);
 levelEl.innerText = levelNumber;
 scoreEl.innerText = score;
 coinsEl.innerText = coinsCollected || 0;
-updateMute = ()=>{ muteBtn.innerText = SOUND_ON ? 'Mute' : 'Unmute'; };
 updateMute();
 
 startPanel.style.display = 'block';
