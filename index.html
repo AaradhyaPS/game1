@@ -3,182 +3,263 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Endless Level Devil — by Aaradhya</title>
+<title>Endless Level Devil — Upgraded</title>
 <style>
-  html,body{height:100%;margin:0;background:#0d1117;font-family:Arial,Helvetica,sans-serif}
-  #wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px}
-  canvas{background:linear-gradient(#87CEEB,#cfe9ff);border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.4)}
-  #hud{color:#041;position:fixed;left:12px;top:12px;background:rgba(255,255,255,0.9);padding:8px 10px;border-radius:8px;font-weight:700}
-  #controls{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px}
-  .btn{background:#ff7f50;border:0;padding:12px 16px;border-radius:10px;color:#fff;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,.25)}
-  .small{font-size:12px;background:#fff;border-radius:6px;padding:6px 8px}
-  #info{color:#fff;position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.3);padding:8px;border-radius:8px}
+  html,body{height:100%;margin:0;background:#0b0f14;font-family:Inter,Arial,Helvetica,sans-serif}
+  #uiTop{position:fixed;left:10px;top:10px;z-index:30;color:#fff}
+  #uiTop .box{background:rgba(0,0,0,0.45);padding:8px 10px;border-radius:8px;margin-bottom:8px}
+  #uiRight{position:fixed;right:10px;top:10px;z-index:30;color:#fff}
+  #canvasWrap{display:flex;align-items:center;justify-content:center;height:100vh}
+  canvas{border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.6);background:#87CEEB;max-width:100%;height:auto}
+  #controls{position:fixed;right:14px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:30}
+  .btn{background:#ff7f50;border:0;padding:10px 14px;border-radius:10px;color:#fff;font-weight:700;box-shadow:0 4px 8px rgba(0,0,0,.25);touch-action:none}
+  .small{font-size:12px;padding:6px 8px;background:rgba(255,255,255,0.95);color:#000;border-radius:6px}
+  #menu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;color:#fff;display:flex;flex-direction:column;align-items:center;gap:12px}
+  #menu .panel{background:linear-gradient(180deg,rgba(0,0,0,0.75),rgba(0,0,0,0.5));padding:18px;border-radius:14px;text-align:center;width:320px}
+  #menu button{width:100%;margin-top:6px}
+  .mutebtn{background:#444;border-radius:8px;padding:6px 8px;color:#fff}
+  #footerNote{position:fixed;left:10px;bottom:10px;color:#fff;opacity:0.6;font-size:12px}
+  @media (max-width:600px){ #menu .panel{width:90vw} canvas{width:95vw;height:auto} }
 </style>
 </head>
 <body>
-<div id="wrap" style="align-items:center">
-  <canvas id="game" width="900" height="520"></canvas>
+<div id="canvasWrap">
+  <canvas id="game" width="1000" height="560"></canvas>
 </div>
 
-<div id="hud">Level: <span id="level">1</span> &nbsp; Score: <span id="score">0</span></div>
-<div id="info">Controls: A/D or ←/→, W or Space to jump. Tap buttons on mobile.</div>
+<div id="uiTop">
+  <div class="box">Level: <span id="level">1</span> &nbsp; Score: <span id="score">0</span></div>
+  <div class="box"><span id="high">Best: 0</span></div>
+</div>
+
+<div id="uiRight">
+  <div class="small" id="themeLabel">Theme: Forest</div>
+  <div style="height:8px"></div>
+  <button id="mute" class="mutebtn">Mute</button>
+</div>
 
 <div id="controls">
-  <button id="acc" class="btn">RIGHT</button>
-  <button id="jump" class="btn">JUMP</button>
+  <button id="acc" class="btn">▶</button>
+  <button id="jump" class="btn">▲</button>
+  <button id="pause" class="btn">Pause</button>
 </div>
 
-<script>
-// ---------- Settings ----------
-const CANVAS_WIDTH = 900, CANVAS_HEIGHT = 520;
-const START_MAP_SEGMENTS = 6;      // segments per level baseline
-const SEGMENT_WIDTH = 600;        // width per segment in px
-const CAMERA_LEFT_PADDING = 240;
+<div id="menu">
+  <div class="panel" id="startPanel">
+    <h2 style="margin:6px 0 0 0">Endless Level Devil</h2>
+    <p style="opacity:0.9">Progressive endless levels — dodge traps, survive, get a high score.</p>
+    <button id="startBtn" class="btn">Start Game</button>
+    <button id="how" class="btn" style="background:#6b8cff">How to Play</button>
+    <div style="height:8px"></div>
+    <div style="font-size:12px;opacity:0.8">Controls: A/D or ←/→, W / Space to jump. Mobile: use buttons.</div>
+  </div>
 
-// ---------- Canvas ----------
+  <div class="panel" id="pausePanel" style="display:none">
+    <h3>Paused</h3>
+    <button id="resume" class="btn">Resume</button>
+    <button id="restart" class="btn" style="background:#e74c3c">Restart</button>
+  </div>
+
+  <div class="panel" id="howPanel" style="display:none">
+    <h3>How to Play</h3>
+    <p>Reach the end of each generated segment to advance to the next. Difficulty increases as you progress. Avoid spikes, fake floors, pop-up traps and moving hazards.</p>
+    <button id="backToMenu" class="btn">Back</button>
+  </div>
+</div>
+
+<div id="footerNote">Made by Aaradhya • Save to GitHub Pages to host</div>
+
+<script>
+/* ----------------- CONFIG ----------------- */
+/* Tweak constants here */
+const BASE_CANVAS_W = 1000, BASE_CANVAS_H = 560;
+const CAMERA_LEFT_PADDING = 260;
+const SEGMENT_W = 700;           // width of generated segments
+const START_SEGMENTS = 5;        // how many segments per first level
+const BASE_DIFFICULTY = 0.12;    // base difficulty ramp
+const MAX_SPAWN_TRAPS = 200;
+
+/* Audio toggles */
+let SOUND_ON = true;
+
+/* ----------------- Canvas & Scaling ----------------- */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-canvas.width = CANVAS_WIDTH;
-canvas.height = CANVAS_HEIGHT;
+canvas.width = BASE_CANVAS_W; canvas.height = BASE_CANVAS_H;
 
-// HUD
+/* UI elements */
 const levelEl = document.getElementById('level');
 const scoreEl = document.getElementById('score');
+const highEl = document.getElementById('high');
+const themeLabel = document.getElementById('themeLabel');
+const muteBtn = document.getElementById('mute');
+const startPanel = document.getElementById('startPanel');
+const pausePanel = document.getElementById('pausePanel');
+const howPanel = document.getElementById('howPanel');
 
-// Controls
+/* touch controls */
 const btnAcc = document.getElementById('acc');
 const btnJump = document.getElementById('jump');
+const pauseBtn = document.getElementById('pause');
 
-// ---------- Input ----------
+/* Menu buttons */
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('how').addEventListener('click', ()=>{ startPanel.style.display='none'; howPanel.style.display='block'; });
+document.getElementById('backToMenu').addEventListener('click', ()=>{ howPanel.style.display='none'; startPanel.style.display='block'; });
+document.getElementById('resume').addEventListener('click', resumeGame);
+document.getElementById('restart').addEventListener('click', ()=>{ resetAll(true); });
+
+/* mute */
+muteBtn.addEventListener('click', ()=>{ SOUND_ON = !SOUND_ON; muteBtn.innerText = SOUND_ON ? 'Mute' : 'Unmute'; });
+
+/* High score in localStorage */
+let HIGH_SCORE = parseInt(localStorage.getItem('lvl_high')||'0');
+highEl.innerText = 'Best: ' + HIGH_SCORE;
+
+/* ----------------- Input ----------------- */
 let keys = {};
-window.addEventListener('keydown', e => { keys[e.key] = true });
-window.addEventListener('keyup', e => { keys[e.key] = false });
+window.addEventListener('keydown', e => { keys[e.key] = true; if(e.key==='p') togglePause(); if(e.key==='m'){ SOUND_ON = !SOUND_ON; muteBtn.innerText = SOUND_ON ? 'Mute' : 'Unmute'; }});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-// touch buttons
 btnAcc.addEventListener('pointerdown', ()=> keys['ArrowRight'] = true);
 btnAcc.addEventListener('pointerup', ()=> keys['ArrowRight'] = false);
 btnAcc.addEventListener('pointercancel', ()=> keys['ArrowRight'] = false);
-btnJump.addEventListener('pointerdown', ()=> { keys[' '] = true; setTimeout(()=> keys[' '] = false, 120); });
+btnJump.addEventListener('pointerdown', ()=>{ keys[' '] = true; setTimeout(()=> keys[' '] = false, 120); });
 
-// ---------- Game objects ----------
+pauseBtn.addEventListener('click', togglePause);
+
+/* ----------------- Audio - simple WebAudio SFX generator ----------------- */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function ensureAudio(){
+  if(!audioCtx) audioCtx = new AudioCtx();
+}
+function playTone(freq=440, type='sine', dur=0.08, vol=0.12){
+  if(!SOUND_ON) return;
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.value = vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  g.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+  setTimeout(()=> o.stop(), dur*1000+20);
+}
+function playClick(){ playTone(880,'sawtooth',0.06,0.08) }
+function playJump(){ playTone(520,'triangle',0.12,0.12) }
+function playDie(){ playTone(140,'sine',0.26,0.18); playTone(120,'sine',0.28,0.06) }
+function playLand(){ playTone(240,'square',0.06,0.08) }
+
+/* ----------------- Game Entities ----------------- */
 class Player {
-  constructor(){
-    this.reset();
-  }
+  constructor(){ this.reset(); }
   reset(){
-    this.x = 120;
-    this.y = 340;
-    this.w = 34;
-    this.h = 48;
-    this.vx = 0;
-    this.vy = 0;
-    this.onGround = false;
+    this.x = 120; this.y = 360; this.w = 36; this.h = 52;
+    this.vx = 0; this.vy = 0; this.onGround = false; this.anim = 0; this.facing=1;
   }
   update(dt){
-    // horizontal control
-    let accel = 0.18;
-    if(keys['a'] || keys['ArrowLeft']) this.vx -= accel * dt;
-    if(keys['d'] || keys['ArrowRight']) this.vx += accel * dt;
-    // clamp speed
-    if(this.vx > 6) this.vx = 6;
-    if(this.vx < -3.5) this.vx = -3.5;
-    // natural drag
-    this.vx *= 0.995;
-
-    // gravity and jump
-    this.vy += 0.8 * (dt/16);
+    // controls
+    const accel = 0.25 * (dt/16);
+    if(keys['a'] || keys['ArrowLeft']) this.vx -= accel, this.facing=-1;
+    if(keys['d'] || keys['ArrowRight']) this.vx += accel, this.facing=1;
+    // limit
+    this.vx = Math.max(-4.2, Math.min(this.vx, 6.2));
+    this.vx *= 0.993;
+    // gravity
+    this.vy += 0.9 * (dt/16);
+    // jump
     if((keys['w'] || keys[' '] || keys['ArrowUp']) && this.onGround){
-      this.vy = -14.4;
-      this.onGround = false;
+      this.vy = -15.6; this.onGround=false; if(SOUND_ON) playJump();
     }
-
+    // apply
     this.x += this.vx * (dt/16);
     this.y += this.vy * (dt/16);
 
-    // collisions: platforms
+    // collisions with platforms
     this.onGround = false;
     for(let p of level.platforms){
       if(this.x + this.w > p.x && this.x < p.x + p.w){
+        // vertical collision only if falling
         if(this.y + this.h > p.y && this.y + this.h < p.y + 22 && this.vy >= 0){
           this.y = p.y - this.h;
           this.vy = 0;
           this.onGround = true;
-          // carry the player on moving platforms
-          if(p.type === 'moving' && p.vx) this.x += p.vx;
+          // carry with moving platform
+          if(p.type === 'moving' && p.vx) this.x += p.vx * (dt/16);
         }
       }
     }
-
     // spikes
     for(let s of level.spikes){
       if(this.x + this.w > s.x && this.x < s.x + s.w &&
          this.y + this.h > s.y && this.y < s.y + s.h){
-           dieAndReset();
+           this.die();
       }
     }
-
-    // pop spikes
+    // popSpikes
     for(let ps of level.popSpikes){
-      if(!ps.active && this.x > ps.triggerAt) ps.activate();
-      if(ps.active){
-        // simple up/down movement handled by ps.update()
-        if(this.x + this.w > ps.x && this.x < ps.x + ps.w &&
-           this.y + this.h > ps.y && this.y < ps.y + ps.h){
-             dieAndReset();
-        }
+      if(ps.active && this.x + this.w > ps.x && this.x < ps.x + ps.w &&
+         this.y + this.h > ps.y && this.y < ps.y + ps.h){
+           this.die();
       }
     }
+    // falling kill
+    if(this.y > canvas.height + 200) this.die();
 
-    // fake floors
-    for(let f of level.fakeFloors){
-      if(!f.broken && this.x + this.w > f.x && this.x < f.x + f.w &&
-         this.y + this.h > f.y && this.y < f.y + f.h){
-           if(!f.stepStarted){ f.stepStarted = true; f.timer = f.delay; }
-      }
-      if(f.stepStarted && f.timer > 0) f.timer--;
-      if(f.stepStarted && f.timer === 0 && !f.broken){
-        f.broken = true;
-      }
-      if(f.broken) f.y += 8; // fall
-      // if player falls with floor -> die handled by void check
-    }
-
-    // moving platforms update moved separately
-
-    // falling into void
-    if(this.y > CANVAS_HEIGHT + 200) dieAndReset();
+    // animation step
+    this.anim += Math.abs(this.vx) * 0.05;
+  }
+  die(){
+    if(SOUND_ON) playDie();
+    // decrement score small
+    score = Math.max(0, score - 80);
+    // reset to level start
+    player.reset();
+    camX = Math.max(0, player.x - CAMERA_LEFT_PADDING);
   }
   draw(){
+    // body with simple running animation
+    const px = this.x - camX, py = this.y;
     ctx.save();
-    ctx.fillStyle = '#222';
-    ctx.fillRect(this.x - camX, this.y, this.w, this.h);
-    // small eye
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(this.x - camX + this.w - 16, this.y + 12, 6, 6);
+    ctx.translate(px + this.w/2, py + this.h/2);
+    if(this.facing<0) ctx.scale(-1,1);
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(-8, this.h/2 + 6, 20, 8, 0,0,Math.PI*2); ctx.fill();
+    // body
+    ctx.fillStyle = '#0b3d91';
+    const bob = Math.sin(this.anim) * 2;
+    ctx.fillRect(-this.w/2, -this.h/2 + bob, this.w, this.h);
+    // head
+    ctx.fillStyle = '#ffd9b6';
+    ctx.fillRect(-this.w/2 + 6, -this.h/2 - 12 + bob, 18, 20);
+    // eye
+    ctx.fillStyle = '#000'; ctx.fillRect(6, -this.h/2 - 6 + bob, 6, 6);
     ctx.restore();
   }
 }
 
 class Platform {
   constructor(x,y,w,type='static',vx=0,range=0){
-    this.x=x; this.y=y; this.w=w; this.h=20; this.type=type;
-    this.vx = vx; this.range = range; this.origX = x;
+    this.x=x; this.y=y; this.w=w; this.h=20; this.type=type; this.vx=vx; this.range=range; this.origX=x;
   }
-  update(){
-    if(this.type === 'moving'){
-      this.x += this.vx;
+  update(dt){
+    if(this.type==='moving'){
+      this.x += this.vx * (dt/16);
       if(this.x < this.origX - this.range || this.x > this.origX + this.range) this.vx *= -1;
     }
   }
   draw(){
-    ctx.fillStyle = (this.type==='moving')? '#6b8cff' : '#444';
+    ctx.fillStyle = (this.type==='moving')? '#4b8aff' : '#5e4f3b';
     ctx.fillRect(this.x - camX, this.y, this.w, this.h);
-    ctx.strokeStyle = '#222'; ctx.strokeRect(this.x - camX, this.y, this.w, this.h);
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.strokeRect(this.x - camX, this.y, this.w, this.h);
   }
 }
 
 class Spike {
-  constructor(x,y){ this.x=x; this.y=y; this.w=28; this.h=28; }
+  constructor(x,y,w=28){ this.x=x; this.y=y; this.w=w; this.h=w; }
   draw(){
     ctx.fillStyle = '#c62828';
     ctx.beginPath();
@@ -186,243 +267,12 @@ class Spike {
     ctx.lineTo(this.x - camX + this.w/2, this.y);
     ctx.lineTo(this.x - camX + this.w, this.y + this.h);
     ctx.fill();
-    ctx.strokeStyle='#6b0000'; ctx.stroke();
+    ctx.strokeStyle = '#7b0000'; ctx.stroke();
   }
 }
 
 class PopSpike {
-  constructor(x,y){
-    this.x=x; this.y=y+40; this.baseY = y+40; this.w=28; this.h=28;
-    this.triggerAt = x - 120; this.active=false; this.timer=0;
-  }
-  activate(){ this.active = true; this.timer = 18; }
-  update(){
-    if(this.active && this.timer > 0){
-      this.y -= 6; this.timer--;
-    } else if(this.active && this.timer === 0){
-      // remain up for a bit then drop
-      if(this.y < this.baseY - 40){
-        // keep for short time
-        this.timer = -36; // negative indicates hold period then drop
-      } else {
-        // if not moved fully, ensure
-      }
-    } else if(this.active && this.timer < 0){
-      // dropping phase
-      this.y += 6; this.timer++;
-      if(this.y >= this.baseY){ this.y = this.baseY; this.active = false; this.timer = 0; }
-    }
-  }
-  draw(){
-    ctx.fillStyle = '#c62828';
-    ctx.beginPath();
-    ctx.moveTo(this.x - camX, this.y + this.h);
-    ctx.lineTo(this.x - camX + this.w/2, this.y);
-    ctx.lineTo(this.x - camX + this.w, this.y + this.h);
-    ctx.fill();
-    ctx.strokeStyle='#6b0000'; ctx.stroke();
-  }
-}
-
-class FakeFloor {
-  constructor(x,y,w,delayFrames=18){ this.x=x; this.y=y; this.w=w; this.h=16; this.delay=delayFrames; this.stepStarted=false; this.timer=0; this.broken=false; }
-  draw(){ ctx.fillStyle = this.broken ? '#6c3' : '#cc9966'; ctx.fillRect(this.x - camX, this.y, this.w, this.h); }
-}
-
-// ---------- Level container ----------
-let level = {
-  platforms: [],
-  spikes: [],
-  popSpikes: [],
-  fakeFloors: [],
-  mapWidth: SEGMENT_WIDTH * START_MAP_SEGMENTS
-};
-
-// player & camera
-let player = new Player();
-let camX = 0;
-
-// scoring and level counter
-let levelNumber = 1;
-let totalDistance = 0;
-
-// timing
-let lastTime = performance.now();
-
-// ---------- Utility: random helpers ----------
-function rand(min,max){ return Math.random()*(max-min)+min; }
-function rint(a,b){ return Math.floor(rand(a,b+1)); }
-
-// ---------- Procedural level builder ----------
-function buildLevelFor(number){
-  // reset arrays
-  level.platforms = []; level.spikes = []; level.popSpikes = []; level.fakeFloors = [];
-  // difficulty factor (progressive)
-  const difficulty = Math.min(1.0, 0.15 + (number-1)*0.06); // grows with levels
-  const segments = START_MAP_SEGMENTS + Math.floor(number*0.6); // length increases slowly
-  level.mapWidth = segments * SEGMENT_WIDTH;
-
-  // base ground platform (long)
-  level.platforms.push(new Platform(0,400, level.mapWidth + 400));
-
-  // add platforms across segments with gaps
-  let x = 220;
-  while(x < level.mapWidth - 160){
-    // decide gap size depending on difficulty
-    const gap = rint(100 + Math.floor(difficulty*120), 220 + Math.floor(difficulty*160));
-    // next platform width
-    const pW = rint(120, 380);
-    const pY = rint(260, 420 - Math.floor(difficulty*60));
-    level.platforms.push(new Platform(x + gap, pY, pW));
-    // occasionally moving platforms
-    if(Math.random() < 0.12 + difficulty*0.25){
-      const mv = new Platform(x + gap + 60, pY - 40, rint(80,150), 'moving', (Math.random()<0.5?1:-1)*(1.2 + difficulty*1.6), rint(40, 140));
-      level.platforms.push(mv);
-    }
-    // spikes near edges
-    if(Math.random() < 0.3 + difficulty*0.5){
-      const sx = x + gap + rint(20, Math.max(20, pW-30));
-      level.spikes.push(new Spike(sx, pY - 28));
-    }
-    // pop spikes sometimes behind platform
-    if(Math.random() < 0.18 + difficulty*0.45){
-      const psx = x + gap + rint(-40, Math.max(40, pW+40));
-      level.popSpikes.push(new PopSpike(psx, pY));
-    }
-    // fake floor occasionally
-    if(Math.random() < 0.16 + difficulty*0.35){
-      const fx = x + gap + rint(40, Math.max(40, pW-40));
-      level.fakeFloors.push(new FakeFloor(fx, pY - 16, rint(60,140), rint(18,36)));
-    }
-
-    x += gap + pW + rint(80,200);
-    // safety: move forward enough
-    if(x > level.mapWidth - 240) break;
-  }
-
-  // finish marker is at mapWidth - 120
-  // place a visible finish indicator -- a tall door / banner
-  level.finishX = level.mapWidth - 160;
-}
-
-// ---------- Death / reset ----------
-function dieAndReset(){
-  // simple immediate reset to start of current level
-  // smaller penalty than starting whole game
-  player.reset();
-  // small camera bounce
-  camX = Math.max(0, player.x - CAMERA_LEFT_PADDING);
-}
-
-// ---------- When player finishes level ----------
-function advanceLevel(){
-  levelNumber++;
-  levelEl.innerText = levelNumber;
-  // increase total distance as score bonus
-  totalDistance += Math.floor(level.mapWidth/6);
-  scoreEl.innerText = totalDistance;
-  // generate new level based on levelNumber
-  buildLevelFor(levelNumber);
-  // reset player and camera to start of new level
-  player.reset();
-  camX = 0;
-}
-
-// ---------- Game loop ----------
-function updateFrame(now){
-  const dt = Math.min(40, now - lastTime); // clamp dt for stability
-  lastTime = now;
-
-  // update moving platforms
-  for(let p of level.platforms) if(p.type === 'moving') p.update();
-
-  // update pop spikes
-  for(let ps of level.popSpikes) if(ps.active) ps.update();
-
-  // player physics
-  player.update(dt);
-
-  // camera follow
-  camX = player.x - CAMERA_LEFT_PADDING;
-  if(camX < 0) camX = 0;
-
-  // update score element by distance traveled (global)
-  const effectiveScore = Math.max(totalDistance, Math.floor(player.x + (levelNumber-1)*1000));
-  scoreEl.innerText = effectiveScore;
-
-  // if player reaches end of map -> advance level
-  if(player.x > level.mapWidth - 120){
-    advanceLevel();
-  }
-
-  // draw
-  drawScene();
-
-  requestAnimationFrame(updateFrame);
-}
-
-// ---------- Draw ----------
-function drawScene(){
-  // clear
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // sky / background
-  const g = ctx.createLinearGradient(0,0,0,canvas.height);
-  g.addColorStop(0,'#87CEEB'); g.addColorStop(1,'#cfe9ff');
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // ground fill under platforms (simple)
-  ctx.fillStyle = '#6b8e23';
-  ctx.fillRect(-camX, 440, canvas.width + camX, canvas.height - 440 + 40);
-
-  // platforms
-  for(let p of level.platforms) p.draw();
-
-  // spikes
-  for(let s of level.spikes) s.draw();
-
-  // fake floors
-  for(let f of level.fakeFloors) f.draw();
-
-  // pop spikes
-  for(let ps of level.popSpikes) ps.draw();
-
-  // finish marker
-  ctx.fillStyle = '#ffd54f'; ctx.fillRect(level.finishX - camX, 300, 12, 140);
-  ctx.fillStyle = '#6d4c41'; ctx.fillRect(level.finishX - camX - 8, 420, 36, 20);
-
-  // player
-  player.draw();
-
-  // top-left HUD (level + score handled by DOM)
-  // draw small level indicator near finish
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.fillRect(canvas.width - 220, 8, 210, 36);
-  ctx.fillStyle = '#fff'; ctx.font = '14px Arial';
-  ctx.fillText('Finish here →', canvas.width - 200, 30);
-}
-
-// ---------- Initialize ----------
-buildLevelFor(levelNumber);
-lastTime = performance.now();
-requestAnimationFrame(updateFrame);
-
-// ---------- Resize handling (optional simple scaling) ----------
-window.addEventListener('resize', ()=> {
-  // keep fixed canvas for simplicity; can add responsive scaling here if you want
-});
-
-// ---------- Optional: touch left button (accelerate left) ----------
-btnAcc.addEventListener('click', ()=> {
-  // mobile friendly: short boost forward
-  player.vx += 1.8;
-});
-btnJump.addEventListener('click', ()=> {
-  if(player.onGround) player.vy = -14.4;
-});
-
-// ---------- Helpful note: make the game playable on slow devices ----------
-</script>
-</body>
-</html>
+  constructor(x,y){ this.x=x; this.baseY=y + 42; this.y=this.baseY; this.w=28; this.h=28; this.triggerAt = x-140; this.active=false; this.timer=0; }
+  activate(){ this.active=true; this.timer=18; }
+  update(dt){
+    if(this.active
